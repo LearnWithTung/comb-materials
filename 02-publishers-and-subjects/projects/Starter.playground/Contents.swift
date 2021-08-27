@@ -3,36 +3,101 @@ import Combine
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+//struct Post: Decodable {
+//    let userId: Int
+//    let id: Int
+//    let title: String
+//    let body: String
+//}
+//
+//class APIService {
+//    static let shared = APIService()
+//    private init() {}
+//
+//    enum Error: Swift.Error {
+//        case invalidData
+//    }
+//
+//    func load(url: URL) -> AnyPublisher<[Post], Swift.Error> {
+//        return URLSession.shared
+//            .dataTaskPublisher(for: url)
+//            .tryMap { data, response in
+//                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+//                    throw Error.invalidData
+//                }
+//                return data
+//            }
+//            .decode(type: [Post].self, decoder: JSONDecoder())
+//            .eraseToAnyPublisher()
+//    }
+//}
+//
+//example(of: "Future") {
+//    let url = URL(string: "https://jsonplaceholder.typicode.com/posts")!
+//    let wrongURL = URL(string: "https://jsonplaceholder.typicode.com/wrong")!
+//    APIService.shared.load(url: wrongURL)
+//        .catch { error -> AnyPublisher<[Post], Swift.Error> in
+//            print(error)
+//            return APIService.shared.load(url: url)
+//        }
+//        .sink { completion in
+//            print(completion)
+//        } receiveValue: { posts in
+//            for post in posts {
+//                dump(post)
+//            }
+//        }
+//        .store(in: &subscriptions)
+//}
 
-/// Copyright (c) 2020 Razeware LLC
-///
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-///
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-///
-/// Notwithstanding the foregoing, you may not use, copy, modify, merge, publish,
-/// distribute, sublicense, create a derivative work, and/or sell copies of the
-/// Software in any work that is designed, intended, or marketed for pedagogical or
-/// instructional purposes related to programming, coding, application development,
-/// or information technology.  Permission for such use, copying, modification,
-/// merger, publication, distribution, sublicensing, creation of derivative works,
-/// or sale is expressly withheld.
-///
-/// This project and source code may use libraries or frameworks that are
-/// released under various Open-Source licenses. Use of those libraries and
-/// frameworks are governed by their own individual licenses.
-///
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
+
+example(of: "Passthrough Subject") {
+    enum MyError: Error {
+        case test
+    }
+    
+    final class StringSubscriber: Subscriber {
+        typealias Input = String
+        typealias Failure = MyError
+        
+        func receive(subscription: Subscription) {
+            subscription.request(.max(2))
+        }
+        
+        func receive(_ input: String) -> Subscribers.Demand {
+            print(input)
+            return input == "World" ? .max(1) : .none
+        }
+        
+        func receive(completion: Subscribers.Completion<MyError>) {
+            
+        }
+    }
+    
+    let subscriber = StringSubscriber()
+    
+    let subject = PassthroughSubject<String, MyError>()
+    
+    subject.subscribe(subscriber)
+        
+    let anotherSubscription = subject
+        .sink { completion in
+            print(completion)
+        } receiveValue: { value in
+            print("Another subcription: ", value)
+        }
+
+    subject.send("Hello")
+    subject.send("World")
+    subject.send("World")
+    subject.send("World")
+    subject.send("World")
+    subject.send("NOT World")
+    subject.send("NOT World")
+
+    anotherSubscription.cancel()
+
+    subject.send("World")
+    subject.send("World")
+
+}
